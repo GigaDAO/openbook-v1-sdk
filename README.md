@@ -20,6 +20,10 @@ The Acceptance Criteria for this bounty is to implement the code snippet found i
   - https://socket.dev/npm/package/@openbook-dex/openbook
 - See market info:
   - https://openserum.io/8BnEgHoWFysVcuFFX7QztDmzuH8r5ZFvyP3sYwn1XTh6
+- Crank utils:
+  - https://github.com/openbook-dex/program/blob/master/dex/crank/src/lib.rs
+- TS market impl:
+  - https://github.com/openbook-dex/openbook-ts/blob/master/packages/openbook/src/market.ts#L327
 
 ### Suggested Approach
 
