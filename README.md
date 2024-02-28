@@ -18,6 +18,8 @@ The Acceptance Criteria for this bounty is to implement the code snippet found i
 - Settle funds
 - See unit tests to copy here:
   - https://socket.dev/npm/package/@openbook-dex/openbook
+- See market info:
+  - https://openserum.io/8BnEgHoWFysVcuFFX7QztDmzuH8r5ZFvyP3sYwn1XTh6
 
 ### Suggested Approach
 
