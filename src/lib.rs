@@ -4,7 +4,6 @@ PC == QUOTE
  */
 use std::cell::RefMut;
 use std::fs;
-use std::mem::size_of;
 use std::num::NonZeroU64;
 use std::ops::DerefMut;
 use std::str::FromStr;
@@ -97,9 +96,20 @@ pub fn load_market() -> anyhow::Result<()>{
         None,
     )?;
 
+    let order_id_0 = oos.orders[0];
+    println!("order id 0: {order_id_0}");
+
+    let free_slots = oos.free_slot_bits;
+    println!("free slots: {free_slots}");
+
     let base_total = oos.native_coin_total;
     let quote_total = oos.native_pc_total;
     println!("base total: {base_total}, quote total: {quote_total}");
+
+    let wsol_total = base_total as f64 / 1e9;
+    let usdc_total = quote_total as f64 / 1e6;
+    println!("WSOL: {:6.4}", wsol_total);
+    println!("USDC: {:6.4}", usdc_total);
 
     // load keys (from u64 arr)
     let request_queue;
@@ -134,7 +144,7 @@ pub fn load_market() -> anyhow::Result<()>{
     println!("event queue: {event_queue}");
     println!("req queue: {request_queue}");
 
-    // TODO do coin/pc math
+    // NOTE: all math below is hard coded, should be dynamic using decimals and lot sizes
     let coin_lot_size = market.coin_lot_size;
     let pc_lot_size = market.pc_lot_size;
     println!("coin lot size: {coin_lot_size}");
@@ -142,7 +152,8 @@ pub fn load_market() -> anyhow::Result<()>{
 
     let target_size_usdc = 1.0;
     let target_usdc_lots_w_fee = (target_size_usdc * 1e6 * 1.1) as u64;
-    let price = max_bid as f64 / 1e3;
+    // let price = max_bid as f64 / 1e3;
+    let price = max_bid as f64 / 1e3 / 2.;
     let target_amount_wsol = target_size_usdc / price;
     let target_wsol_lots = (target_amount_wsol * 1e3) as u64;
     println!("using target wsol lots: {target_wsol_lots}");
@@ -154,54 +165,86 @@ pub fn load_market() -> anyhow::Result<()>{
     //
     let limit = u16::MAX;
     let client_order_id = random::<u64>();
-    // let client_order_id = 123;
-
 
     let usdc_ata_str = std::env::var("USDC_ATA").expect("USDC_ATA is not set in .env file");
     let usdc_ata = Pubkey::from_str(usdc_ata_str.as_str()).unwrap();
 
-    let place_order_ix = openbook_dex::instruction::new_order(
-        &market_account_binding,
-        &orders_key,
-        &request_queue,
-        &event_queue,
-        &bids_address,
-        &asks_address,
-        &usdc_ata,
-        &keypair.pubkey(),
-        &coin_vault,
-        &pc_vault,
-        &anchor_spl::token::ID,
-        &solana_program::sysvar::rent::ID,
-        None,
-        &program_id_binding,
-        Side::Bid,
-        limit_price,
-        max_coin_qty,
-        OrderType::PostOnly,
-        client_order_id,
-        SelfTradeBehavior::AbortTransaction,
-        limit,
-        max_native_pc_qty_including_fees,
-        (get_unix_secs() + 30) as i64,
-    )?;
+    let place_limit_bid = false;
+    if place_limit_bid {
+        let place_order_ix = openbook_dex::instruction::new_order(
+            &market_account_binding,
+            &orders_key,
+            &request_queue,
+            &event_queue,
+            &bids_address,
+            &asks_address,
+            &usdc_ata,
+            &keypair.pubkey(),
+            &coin_vault,
+            &pc_vault,
+            &anchor_spl::token::ID,
+            &solana_program::sysvar::rent::ID,
+            None,
+            &program_id_binding,
+            Side::Bid,
+            limit_price,
+            max_coin_qty,
+            OrderType::PostOnly,
+            client_order_id,
+            SelfTradeBehavior::AbortTransaction,
+            limit,
+            max_native_pc_qty_including_fees,
+            (get_unix_secs() + 30) as i64,
+        )?;
 
-    // place order
-    let mut instructions = Vec::new();
-    instructions.push(place_order_ix);
+        // place order
+        let mut instructions = Vec::new();
+        instructions.push(place_order_ix);
 
-    let recent_hash = rpc_client.get_latest_blockhash()?;
-    let txn = Transaction::new_signed_with_payer(
-        &instructions,
-        Some(&keypair.pubkey()),
-        &[&keypair],
-        recent_hash,
-    );
+        let recent_hash = rpc_client.get_latest_blockhash()?;
+        let txn = Transaction::new_signed_with_payer(
+            &instructions,
+            Some(&keypair.pubkey()),
+            &[&keypair],
+            recent_hash,
+        );
 
-    let mut config = RpcSendTransactionConfig::default();
-    config.skip_preflight = true;
-    let r = rpc_client.send_transaction_with_config(&txn, config);
-    println!("got results: {:?}", r);
+        let mut config = RpcSendTransactionConfig::default();
+        config.skip_preflight = true;
+        let r = rpc_client.send_transaction_with_config(&txn, config);
+        println!("got results: {:?}", r);
+    }
+
+    let cancel_order = true;
+    if cancel_order {
+        let ix = openbook_dex::instruction::cancel_order(
+            &program_id_binding,
+            &market_account_binding,
+            &bids_address,
+            &asks_address,
+            &orders_key,
+            &keypair.pubkey(),
+            &event_queue,
+            Side::Bid,
+            order_id_0,
+        )?;
+        // place order
+        let mut instructions = Vec::new();
+        instructions.push(ix);
+
+        let recent_hash = rpc_client.get_latest_blockhash()?;
+        let txn = Transaction::new_signed_with_payer(
+            &instructions,
+            Some(&keypair.pubkey()),
+            &[&keypair],
+            recent_hash,
+        );
+
+        let mut config = RpcSendTransactionConfig::default();
+        config.skip_preflight = true;
+        let r = rpc_client.send_transaction_with_config(&txn, config);
+        println!("got results: {:?}", r);
+    }
 
 
     Ok(())
