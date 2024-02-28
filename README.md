@@ -16,6 +16,8 @@ The Acceptance Criteria for this bounty is to implement the code snippet found i
 - Cancel existing limit orders
 - Retrieve fill history
 - Settle funds
+
+## Resources
 - See unit tests to copy here:
   - https://socket.dev/npm/package/@openbook-dex/openbook
 - See market info:
