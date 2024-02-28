@@ -88,6 +88,10 @@ pub fn load_market() -> anyhow::Result<()>{
     let owners_account_info = create_account_info_from_account(&mut owners_account, &binding, &program_id_binding, false, false);
 
     let market = openbook_dex::state::Market::load(&account_info, &program_id_binding, false)?;
+
+    let vault_signer_nonce = market.vault_signer_nonce;
+    let vault_signer_key = openbook_dex::state::gen_vault_signer_key(vault_signer_nonce, &market_account_binding, &program_id_binding)?;
+
     let oos = market.load_orders_mut(
         &orders_account_info,
         Some(&owners_account_info),
@@ -105,6 +109,9 @@ pub fn load_market() -> anyhow::Result<()>{
     let base_total = oos.native_coin_total;
     let quote_total = oos.native_pc_total;
     println!("base total: {base_total}, quote total: {quote_total}");
+    let base_free = oos.native_coin_free;
+    let quote_free = oos.native_pc_free;
+    println!("base free: {base_free}, quote free: {quote_free}");
 
     let wsol_total = base_total as f64 / 1e9;
     let usdc_total = quote_total as f64 / 1e6;
@@ -169,6 +176,9 @@ pub fn load_market() -> anyhow::Result<()>{
     let usdc_ata_str = std::env::var("USDC_ATA").expect("USDC_ATA is not set in .env file");
     let usdc_ata = Pubkey::from_str(usdc_ata_str.as_str()).unwrap();
 
+    let wsol_ata_str = std::env::var("WSOL_ATA").expect("WSOL_ATA is not set in .env file");
+    let wsol_ata = Pubkey::from_str(wsol_ata_str.as_str()).unwrap();
+
     let place_limit_bid = false;
     if place_limit_bid {
         let place_order_ix = openbook_dex::instruction::new_order(
@@ -215,7 +225,7 @@ pub fn load_market() -> anyhow::Result<()>{
         println!("got results: {:?}", r);
     }
 
-    let cancel_order = true;
+    let cancel_order = false;
     if cancel_order {
         let ix = openbook_dex::instruction::cancel_order(
             &program_id_binding,
@@ -244,6 +254,42 @@ pub fn load_market() -> anyhow::Result<()>{
         config.skip_preflight = true;
         let r = rpc_client.send_transaction_with_config(&txn, config);
         println!("got results: {:?}", r);
+    }
+
+    let settle_balance = true;
+    if settle_balance {
+
+        let ix = openbook_dex::instruction::settle_funds(
+            &program_id_binding,
+            &market_account_binding,
+            &anchor_spl::token::ID,
+            &orders_key,
+            &keypair.pubkey(),
+            &coin_vault,
+            &wsol_ata,
+            &pc_vault,
+            &usdc_ata,
+            None,
+            &vault_signer_key,
+        )?;
+
+        // place order
+        let mut instructions = Vec::new();
+        instructions.push(ix);
+
+        let recent_hash = rpc_client.get_latest_blockhash()?;
+        let txn = Transaction::new_signed_with_payer(
+            &instructions,
+            Some(&keypair.pubkey()),
+            &[&keypair],
+            recent_hash,
+        );
+
+        let mut config = RpcSendTransactionConfig::default();
+        config.skip_preflight = true;
+        let r = rpc_client.send_transaction_with_config(&txn, config);
+        println!("got results: {:?}", r);
+
     }
 
 
