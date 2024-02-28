@@ -1916,6 +1916,7 @@ dependencies = [
  "anyhow",
  "dotenv",
  "openbook_dex",
+ "serde_json",
  "solana-program",
  "solana-rpc-client",
  "solana-sdk",
