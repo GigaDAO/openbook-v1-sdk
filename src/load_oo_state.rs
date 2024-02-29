@@ -94,6 +94,9 @@ pub fn load_oo_state(rpc_client: &mut RpcClient, market_state: RefMut<MarketStat
         }
     }
 
+    println!("open bids: {:?}", &open_bids);
+    println!("open asks: {:?}", &open_asks);
+
     Ok(OpenOrderState{
         min_ask,
         max_bid,

@@ -59,19 +59,19 @@ pub fn load_ob_client() -> anyhow::Result<ObClient>{
             None,
         )?;
 
-        // let order_id_0 = oos.orders[0];
-        // println!("order id 0: {order_id_0}");
-        // let base_total = oos.native_coin_total;
-        // let quote_total = oos.native_pc_total;
-        // println!("base total: {base_total}, quote total: {quote_total}");
-        // let base_free = oos.native_coin_free;
-        // let quote_free = oos.native_pc_free;
-        // println!("base free: {base_free}, quote free: {quote_free}");
-        //
-        // let wsol_total = base_total as f64 / 1e9;
-        // let usdc_total = quote_total as f64 / 1e6;
-        // println!("WSOL: {:6.4}", wsol_total);
-        // println!("USDC: {:6.4}", usdc_total);
+        let base_total = oos.native_coin_total;
+        let quote_total = oos.native_pc_total;
+        let base_free = oos.native_coin_free;
+        let quote_free = oos.native_pc_free;
+        let wsol_total = base_total as f64 / 1e9;
+        let usdc_total = quote_total as f64 / 1e6;
+
+        let claimable = base_free > 0 || quote_free > 0;
+
+        println!("base total: {base_total}, quote total: {quote_total}");
+        println!("base free: {base_free}, quote free: {quote_free}");
+        println!("WSOL: {:6.4}", wsol_total);
+        println!("USDC: {:6.4}", usdc_total);
 
         // load keys (from u64 arr)
         let request_queue;
@@ -117,6 +117,7 @@ pub fn load_ob_client() -> anyhow::Result<ObClient>{
             program_id: program_id_binding,
             vault_signer_key,
             oo_state,
+            claimable,
         }
 
     }
