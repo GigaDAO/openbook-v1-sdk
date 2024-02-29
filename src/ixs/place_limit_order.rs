@@ -15,32 +15,46 @@ pub fn place_limit_order(
     best_offset_usdc: f64,
 ) -> anyhow::Result<()> {
 
+
     // TODO dynamic
-    let target_usdc_lots_w_fee = (target_size_usdc * 1e6 * 1.1) as u64; // NOTE should be negative fees...
+    // wsol/usdc
+    // let base_d_factor = 1e9;
+    // let quote_d_factor = 1e6;
+    // let base_lot_factor = 1e6;
+    // let quote_lot_factor = 1e0;
+
+    // jlp/usdc
+    let base_d_factor = 1e6;
+    let quote_d_factor = 1e6;
+    let base_lot_factor = 1e5;
+    let quote_lot_factor = 1e1;
+
+    let price_factor = quote_d_factor * base_lot_factor / base_d_factor / quote_lot_factor;
+    // let price_factor = 1e3; // wsol/usdc
+    // let price_factor = 1e4; // jlp/usdc
+
+    let target_usdc_lots_w_fee = (target_size_usdc * quote_d_factor * 1.1) as u64; // NOTE should be negative fees...
+    // let target_usdc_lots_w_fee = (target_size_usdc * quote_d_factor / quote_lot_factor * 1.1) as u64; // NOTE should be negative fees...
 
     let (input_ata, price) = match side {
         Side::Bid => {
 
-            // TODO dynamic
-            let price = ob_client.oo_state.max_bid as f64 / 1e3 - best_offset_usdc;
+            let price = ob_client.oo_state.max_bid as f64 / price_factor - best_offset_usdc;
 
             (&ob_client.quote_ata, price)
         }
         Side::Ask => {
 
-            // TODO dynamic
-            let price = ob_client.oo_state.min_ask as f64 / 1e3 + best_offset_usdc;
+            let price = ob_client.oo_state.min_ask as f64 / price_factor + best_offset_usdc;
 
             (&ob_client.base_ata, price)
         }
     };
 
-    // TODO dynamic
-    let new_bid = (price * 1e3) as u64;
+    let new_bid = (price * price_factor) as u64;
     let target_amount_wsol = target_size_usdc / price;
-    // TODO dynamic
-    let target_wsol_lots = (target_amount_wsol * 1e3) as u64;
-
+    // TODO
+    let target_wsol_lots = (target_amount_wsol * base_d_factor / base_lot_factor) as u64;
     let limit_price = NonZeroU64::new(new_bid).unwrap();
     let max_coin_qty = NonZeroU64::new(target_wsol_lots).unwrap(); // max wsol lots
     let max_native_pc_qty_including_fees = NonZeroU64::new(target_usdc_lots_w_fee).unwrap(); // max usdc lots + fees

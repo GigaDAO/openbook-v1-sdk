@@ -26,7 +26,6 @@ use crate::load_oo_state::{OpenOrderState};
 use crate::ob_client::load_ob_client;
 use crate::utils::{create_account_info_from_account};
 
-const SOL_USDC_MARKET_ID: &str = "8BnEgHoWFysVcuFFX7QztDmzuH8r5ZFvyP3sYwn1XTh6";
 const OPENBOOK_V1_PROGRAM_ID: &str = "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX";
 
 #[derive(Debug)]
@@ -58,7 +57,7 @@ pub fn test_place_and_cancel() -> anyhow::Result<()>{
             settle_balance(&mut ob_client)?;
         }
 
-        // place_limit_order(&mut ob_client, 1., Side::Bid, 20.)?;
+        // place_limit_order(&mut ob_client, 1., Side::Bid, -0.11)?;
         // place_limit_order(&mut ob_client, 1., Side::Bid, 30.)?;
         // place_limit_order(&mut ob_client, 1., Side::Ask, 20.)?;
         // place_limit_order(&mut ob_client, 1., Side::Ask, 30.)?;

@@ -48,6 +48,7 @@ pub fn load_oo_state(rpc_client: &mut RpcClient, market_state: RefMut<MarketStat
                     //
                     let order_id = node.order_id();
                     let price_raw = node.price().get();
+                    println!("bid: {price_raw}");
                     if max_bid == 0 {
                         max_bid = price_raw;
                     }
@@ -80,6 +81,7 @@ pub fn load_oo_state(rpc_client: &mut RpcClient, market_state: RefMut<MarketStat
                     //
                     let order_id = node.order_id();
                     let price_raw = node.price().get();
+                    println!("ask: {price_raw}");
                     if min_ask == 0 {
                         min_ask = price_raw;
                     }

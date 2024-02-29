@@ -3,7 +3,7 @@ use openbook_dex::state::MarketState;
 use solana_program::pubkey::Pubkey;
 use solana_rpc_client::rpc_client::RpcClient;
 use solana_sdk::signature::Signer;
-use crate::{ObClient, OPENBOOK_V1_PROGRAM_ID, SOL_USDC_MARKET_ID};
+use crate::{ObClient, OPENBOOK_V1_PROGRAM_ID};
 use crate::initialize_oo_account::initialize_new_oos_account;
 use crate::load_oo_state::load_oo_state;
 use crate::utils::{create_account_info_from_account, read_keypair};
@@ -16,9 +16,11 @@ pub fn load_ob_client() -> anyhow::Result<Option<ObClient>>{
     let keypair = read_keypair(&key_path);
     let rpc_url = std::env::var("RPC_URL").expect("RPC_URL is not set in .env file");
     let mut rpc_client = RpcClient::new(rpc_url);
-    let mut account = rpc_client.get_account(&SOL_USDC_MARKET_ID.parse().unwrap())?;
+
+    let market_id = std::env::var("MARKET_ID").expect("MARKET_ID is not set in .env file");
+    let market_account_binding = market_id.as_str().parse().unwrap();
+    let mut account = rpc_client.get_account(&market_account_binding)?;
     let program_id_binding = OPENBOOK_V1_PROGRAM_ID.parse().unwrap();
-    let market_account_binding = SOL_USDC_MARKET_ID.parse().unwrap();
 
     let OOS_KEY_STR = std::env::var("OOS_KEY").expect("OOS_KEY is not set in .env file");
     let orders_key = Pubkey::from_str(OOS_KEY_STR.as_str());
