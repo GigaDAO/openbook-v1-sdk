@@ -1,9 +1,10 @@
+use solana_program::instruction::Instruction;
 use solana_rpc_client_api::config::RpcSendTransactionConfig;
 use solana_sdk::signature::Signer;
 use solana_sdk::transaction::Transaction;
 use crate::ObClient;
 
-pub fn settle_balance(ob_client: &mut ObClient) -> anyhow::Result<()> {
+pub fn settle_balance(ob_client: &mut ObClient, execute: bool) -> anyhow::Result<Option<Vec<Instruction>>> {
 
     let ix = openbook_dex::instruction::settle_funds(
         &ob_client.program_id,
@@ -23,6 +24,10 @@ pub fn settle_balance(ob_client: &mut ObClient) -> anyhow::Result<()> {
     let mut instructions = Vec::new();
     instructions.push(ix);
 
+    if ! execute {
+        return Ok(Some(instructions));
+    }
+
     let recent_hash = ob_client.rpc_client.get_latest_blockhash()?;
     let txn = Transaction::new_signed_with_payer(
         &instructions,
@@ -36,5 +41,5 @@ pub fn settle_balance(ob_client: &mut ObClient) -> anyhow::Result<()> {
     let r = ob_client.rpc_client.send_transaction_with_config(&txn, config);
     println!("got results: {:?}", r);
 
-    Ok(())
+    Ok(None)
 }

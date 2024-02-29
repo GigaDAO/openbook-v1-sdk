@@ -2,11 +2,11 @@
 COIN == BASE
 PC == QUOTE
  */
-mod load_oo_state;
+pub mod load_oo_state;
 mod initialize_oo_account;
-mod utils;
-mod ob_client;
-mod ixs;
+pub mod utils;
+pub mod ob_client;
+pub mod ixs;
 
 use std::ops::DerefMut;
 use std::str::FromStr;
@@ -54,7 +54,7 @@ pub fn test_place_and_cancel() -> anyhow::Result<()>{
     if let Some(mut ob_client) = ob_client {
 
         if ob_client.claimable {
-            settle_balance(&mut ob_client)?;
+            // settle_balance(&mut ob_client)?;
         }
 
         // place_limit_order(&mut ob_client, 1., Side::Bid, -0.11)?;

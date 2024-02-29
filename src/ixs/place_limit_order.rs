@@ -2,6 +2,7 @@ use std::num::NonZeroU64;
 use openbook_dex::instruction::SelfTradeBehavior;
 use openbook_dex::matching::{OrderType, Side};
 use rand::random;
+use solana_program::instruction::Instruction;
 use solana_rpc_client_api::config::RpcSendTransactionConfig;
 use solana_sdk::signature::Signer;
 use solana_sdk::transaction::Transaction;
@@ -13,7 +14,9 @@ pub fn place_limit_order(
     target_size_usdc: f64,
     side: Side,
     best_offset_usdc: f64,
-) -> anyhow::Result<()> {
+    execute: bool,
+    target_price: f64,
+) -> anyhow::Result<Option<Vec<Instruction>>> {
 
 
     // TODO dynamic
@@ -35,13 +38,19 @@ pub fn place_limit_order(
     let (input_ata, price) = match side {
         Side::Bid => {
 
-            let price = ob_client.oo_state.max_bid as f64 / price_factor - best_offset_usdc;
+            let mut price = ob_client.oo_state.max_bid as f64 / price_factor - best_offset_usdc;
+            if !execute {
+                price = target_price;
+            }
 
             (&ob_client.quote_ata, price)
         }
         Side::Ask => {
 
-            let price = ob_client.oo_state.min_ask as f64 / price_factor + best_offset_usdc;
+            let mut price = ob_client.oo_state.min_ask as f64 / price_factor + best_offset_usdc;
+            if !execute {
+                price = target_price;
+            }
 
             (&ob_client.base_ata, price)
         }
@@ -84,6 +93,10 @@ pub fn place_limit_order(
     let mut instructions = Vec::new();
     instructions.push(place_order_ix);
 
+    if !execute {
+        return Ok(Some(instructions));
+    }
+
     let recent_hash = ob_client.rpc_client.get_latest_blockhash()?;
     let txn = Transaction::new_signed_with_payer(
         &instructions,
@@ -97,5 +110,5 @@ pub fn place_limit_order(
     let r = ob_client.rpc_client.send_transaction_with_config(&txn, config);
     println!("got results: {:?}", r);
 
-    Ok(())
+    Ok(None)
 }

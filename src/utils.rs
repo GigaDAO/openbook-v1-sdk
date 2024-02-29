@@ -9,6 +9,7 @@ use solana_rpc_client::rpc_client::RpcClient;
 use solana_sdk::account::Account;
 use solana_sdk::bs58;
 use solana_sdk::signature::{Keypair, Signer};
+use crate::ObClient;
 
 pub fn create_dex_account(
     client: &RpcClient,
@@ -81,3 +82,18 @@ pub fn read_keypair(path: &String) -> Keypair {
 pub fn get_unix_secs() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
 }
+
+pub fn get_equity(ob_client: &mut ObClient) -> anyhow::Result<(f64, f64)>{
+
+    let ba = &ob_client.base_ata;
+    let qa = &ob_client.quote_ata;
+
+    let bb = ob_client.rpc_client.get_token_account_balance(ba)?.ui_amount.unwrap();
+    let qb = ob_client.rpc_client.get_token_account_balance(qa)?.ui_amount.unwrap();
+
+    Ok((bb, qb))
+
+}
+
+
+
