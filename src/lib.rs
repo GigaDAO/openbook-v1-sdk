@@ -23,6 +23,7 @@ use solana_sdk::signature::{Keypair, Signer};
 use solana_sdk::transaction::Transaction;
 use rand::random;
 use solana_rpc_client_api::config::RpcSendTransactionConfig;
+use crate::ixs::cancel_limit_order::cancel_all_limit_orders;
 use crate::ixs::place_limit_order::place_limit_order;
 use crate::ixs::settle_balance::settle_balance;
 use crate::load_oo_state::{load_oo_state, OpenOrderState};
@@ -59,17 +60,12 @@ pub fn test_place_and_cancel() -> anyhow::Result<()>{
         settle_balance(&mut ob_client)?;
     }
 
-    // TODO place 2 bids and 2 asks
     // place_limit_order(&mut ob_client, 1., Side::Bid, 20.)?;
     // place_limit_order(&mut ob_client, 1., Side::Bid, 30.)?;
     // place_limit_order(&mut ob_client, 1., Side::Ask, 20.)?;
     // place_limit_order(&mut ob_client, 1., Side::Ask, 30.)?;
 
-    // TODO confirm 4 open order
-
-    // TODO cancel all
-
-    // TODO confirm no open orders
+    cancel_all_limit_orders(&mut ob_client)?;
 
     Ok(())
 }
