@@ -30,7 +30,21 @@ const OPENBOOK_V1_PROGRAM_ID: &str = "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtP
 
 
 pub fn load_market() -> anyhow::Result<()>{
+
+    // config
+    let place_limit_bid = false;
+    let cancel_order = false;
+    let settle_balance = false;
+
+
     dotenv::dotenv().ok();
+
+    let key_path = std::env::var("KEY_PATH").expect("KEY_PATH is not set in .env file");
+    let keypair = read_keypair(&key_path);
+
+    let OOS_KEY_STR = std::env::var("OOS_KEY").expect("OOS_KEY is not set in .env file");
+    let orders_key = Pubkey::from_str(OOS_KEY_STR.as_str())?;
+
     let rpc_url = std::env::var("RPC_URL").expect("RPC_URL is not set in .env file");
     let rpc_client = RpcClient::new(rpc_url);
     let mut account = rpc_client.get_account(&SOL_USDC_MARKET_ID.parse().unwrap())?;
@@ -46,7 +60,7 @@ pub fn load_market() -> anyhow::Result<()>{
     let bids_address;
     let asks_address;
 
-    let max_bid;
+    let mut max_bid = 0;
     {
         let market_state = MarketState::load(
             &account_info,
@@ -61,23 +75,36 @@ pub fn load_market() -> anyhow::Result<()>{
             let node = bids.remove_max();
             match node {
                 Some(node) => {
+
+                    let owner_byes = node.owner();
+                    //
+                    let mut bytes: [u8; 32] = [0; 32];
+                    for i in 0..4 {
+                        bytes[i*8..i*8+8].copy_from_slice(&owner_byes[i].to_le_bytes());
+                    }
+                    let owner_address = Pubkey::from(bytes);
+                    let order_id = node.order_id();
                     let price_raw = node.price().get();
                     let price = price_raw as f64 / 1e3;
-                    println!("{price}");
-                    max_bid = price_raw;
-                    break;
+
+                    if max_bid == 0 {
+                        max_bid = price_raw;
+                    }
+
+                    // println!("{order_id}, {}", owner_address.to_string());
+
+                    if &owner_address == &orders_key {
+                        println!("FOUND oid: {order_id}, price: {price}");
+                    }
+
                 }
                 None => {
-                    panic!("failed to load bids");
+                    break;
                 }
             }
         }
     }
-    let key_path = std::env::var("KEY_PATH").expect("KEY_PATH is not set in .env file");
-    let keypair = read_keypair(&key_path);
 
-    let OOS_KEY_STR = std::env::var("OOS_KEY").expect("OOS_KEY is not set in .env file");
-    let orders_key = Pubkey::from_str(OOS_KEY_STR.as_str())?;
 
     // NOTE get open orders - must cross reference with loaded bids/asks
     let mut orders_account = rpc_client.get_account(&orders_key)?;
@@ -148,30 +175,30 @@ pub fn load_market() -> anyhow::Result<()>{
     }
     pc_vault = Pubkey::from(bytes);
 
-    println!("event queue: {event_queue}");
-    println!("req queue: {request_queue}");
-
     // NOTE: all math below is hard coded, should be dynamic using decimals and lot sizes
     let coin_lot_size = market.coin_lot_size;
     let pc_lot_size = market.pc_lot_size;
-    println!("coin lot size: {coin_lot_size}");
-    println!("pc lot size: {pc_lot_size}");
+    // println!("coin lot size: {coin_lot_size}");
+    // println!("pc lot size: {pc_lot_size}");
 
     let target_size_usdc = 1.0;
     let target_usdc_lots_w_fee = (target_size_usdc * 1e6 * 1.1) as u64;
     // let price = max_bid as f64 / 1e3;
-    let price = max_bid as f64 / 1e3 / 2.;
+    let price = max_bid as f64 / 1e3 - 30.;
+    let new_bid = (price * 1e3) as u64;
+    // println!("target pride: {price}");
     let target_amount_wsol = target_size_usdc / price;
     let target_wsol_lots = (target_amount_wsol * 1e3) as u64;
-    println!("using target wsol lots: {target_wsol_lots}");
+    // println!("using target wsol lots: {target_wsol_lots}");
 
-    let limit_price = NonZeroU64::new(max_bid).unwrap();
+    let limit_price = NonZeroU64::new(new_bid).unwrap();
     let max_coin_qty = NonZeroU64::new(target_wsol_lots).unwrap(); // max wsol lots
     let max_native_pc_qty_including_fees = NonZeroU64::new(target_usdc_lots_w_fee).unwrap(); // max usdc lots + fees
 
     //
     let limit = u16::MAX;
     let client_order_id = random::<u64>();
+    // println!("client order id: {client_order_id}");
 
     let usdc_ata_str = std::env::var("USDC_ATA").expect("USDC_ATA is not set in .env file");
     let usdc_ata = Pubkey::from_str(usdc_ata_str.as_str()).unwrap();
@@ -179,7 +206,6 @@ pub fn load_market() -> anyhow::Result<()>{
     let wsol_ata_str = std::env::var("WSOL_ATA").expect("WSOL_ATA is not set in .env file");
     let wsol_ata = Pubkey::from_str(wsol_ata_str.as_str()).unwrap();
 
-    let place_limit_bid = false;
     if place_limit_bid {
         let place_order_ix = openbook_dex::instruction::new_order(
             &market_account_binding,
@@ -225,7 +251,6 @@ pub fn load_market() -> anyhow::Result<()>{
         println!("got results: {:?}", r);
     }
 
-    let cancel_order = false;
     if cancel_order {
         let ix = openbook_dex::instruction::cancel_order(
             &program_id_binding,
@@ -256,7 +281,6 @@ pub fn load_market() -> anyhow::Result<()>{
         println!("got results: {:?}", r);
     }
 
-    let settle_balance = true;
     if settle_balance {
 
         let ix = openbook_dex::instruction::settle_funds(
