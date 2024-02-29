@@ -23,18 +23,14 @@ pub fn place_limit_order(
     // let base_lot_factor = 1e6;
     // let quote_lot_factor = 1e0;
 
-    // jlp/usdc
+    // j/usdc
     let base_d_factor = 1e6;
     let quote_d_factor = 1e6;
     let base_lot_factor = 1e5;
     let quote_lot_factor = 1e1;
 
     let price_factor = quote_d_factor * base_lot_factor / base_d_factor / quote_lot_factor;
-    // let price_factor = 1e3; // wsol/usdc
-    // let price_factor = 1e4; // jlp/usdc
-
     let target_usdc_lots_w_fee = (target_size_usdc * quote_d_factor * 1.1) as u64; // NOTE should be negative fees...
-    // let target_usdc_lots_w_fee = (target_size_usdc * quote_d_factor / quote_lot_factor * 1.1) as u64; // NOTE should be negative fees...
 
     let (input_ata, price) = match side {
         Side::Bid => {
@@ -53,7 +49,6 @@ pub fn place_limit_order(
 
     let new_bid = (price * price_factor) as u64;
     let target_amount_wsol = target_size_usdc / price;
-    // TODO
     let target_wsol_lots = (target_amount_wsol * base_d_factor / base_lot_factor) as u64;
     let limit_price = NonZeroU64::new(new_bid).unwrap();
     let max_coin_qty = NonZeroU64::new(target_wsol_lots).unwrap(); // max wsol lots
