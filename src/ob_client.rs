@@ -4,28 +4,37 @@ use solana_program::pubkey::Pubkey;
 use solana_rpc_client::rpc_client::RpcClient;
 use solana_sdk::signature::Signer;
 use crate::{ObClient, OPENBOOK_V1_PROGRAM_ID, SOL_USDC_MARKET_ID};
+use crate::initialize_oo_account::initialize_new_oos_account;
 use crate::load_oo_state::load_oo_state;
 use crate::utils::{create_account_info_from_account, read_keypair};
 
-pub fn load_ob_client() -> anyhow::Result<ObClient>{
+pub fn load_ob_client() -> anyhow::Result<Option<ObClient>>{
 
     // load env
     dotenv::dotenv().ok();
     let key_path = std::env::var("KEY_PATH").expect("KEY_PATH is not set in .env file");
     let keypair = read_keypair(&key_path);
-    let OOS_KEY_STR = std::env::var("OOS_KEY").expect("OOS_KEY is not set in .env file");
-    let orders_key = Pubkey::from_str(OOS_KEY_STR.as_str())?;
-    let usdc_ata_str = std::env::var("USDC_ATA").expect("USDC_ATA is not set in .env file");
-    let usdc_ata = Pubkey::from_str(usdc_ata_str.as_str()).unwrap();
-    let wsol_ata_str = std::env::var("WSOL_ATA").expect("WSOL_ATA is not set in .env file");
-    let wsol_ata = Pubkey::from_str(wsol_ata_str.as_str()).unwrap();
     let rpc_url = std::env::var("RPC_URL").expect("RPC_URL is not set in .env file");
-
-    // load state
     let mut rpc_client = RpcClient::new(rpc_url);
     let mut account = rpc_client.get_account(&SOL_USDC_MARKET_ID.parse().unwrap())?;
     let program_id_binding = OPENBOOK_V1_PROGRAM_ID.parse().unwrap();
     let market_account_binding = SOL_USDC_MARKET_ID.parse().unwrap();
+
+    let OOS_KEY_STR = std::env::var("OOS_KEY").expect("OOS_KEY is not set in .env file");
+    let orders_key = Pubkey::from_str(OOS_KEY_STR.as_str());
+
+    if orders_key.is_err() {
+        initialize_new_oos_account(&mut rpc_client, program_id_binding, keypair, market_account_binding)?;
+        return Ok(None);
+    }
+
+    let orders_key = orders_key.unwrap();
+
+    let usdc_ata_str = std::env::var("USDC_ATA").expect("USDC_ATA is not set in .env file");
+    let usdc_ata = Pubkey::from_str(usdc_ata_str.as_str()).unwrap();
+    let wsol_ata_str = std::env::var("WSOL_ATA").expect("WSOL_ATA is not set in .env file");
+    let wsol_ata = Pubkey::from_str(wsol_ata_str.as_str()).unwrap();
+
     let account_info = create_account_info_from_account(&mut account, &market_account_binding, &program_id_binding, false, false);
     let oo_state;
     {
@@ -70,8 +79,8 @@ pub fn load_ob_client() -> anyhow::Result<ObClient>{
 
         println!("base total: {base_total}, quote total: {quote_total}");
         println!("base free: {base_free}, quote free: {quote_free}");
-        println!("WSOL: {:6.4}", wsol_total);
-        println!("USDC: {:6.4}", usdc_total);
+        println!("BASE: {:6.4}", wsol_total);
+        println!("QUOTE(USDC): {:6.4}", usdc_total);
 
         // load keys (from u64 arr)
         let request_queue;
@@ -122,6 +131,6 @@ pub fn load_ob_client() -> anyhow::Result<ObClient>{
 
     }
 
-    Ok(ob_client)
+    Ok(Some(ob_client))
 
 }

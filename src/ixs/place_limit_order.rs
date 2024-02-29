@@ -15,25 +15,30 @@ pub fn place_limit_order(
     best_offset_usdc: f64,
 ) -> anyhow::Result<()> {
 
+    // TODO dynamic
     let target_usdc_lots_w_fee = (target_size_usdc * 1e6 * 1.1) as u64; // NOTE should be negative fees...
 
     let (input_ata, price) = match side {
         Side::Bid => {
 
+            // TODO dynamic
             let price = ob_client.oo_state.max_bid as f64 / 1e3 - best_offset_usdc;
 
             (&ob_client.quote_ata, price)
         }
         Side::Ask => {
 
+            // TODO dynamic
             let price = ob_client.oo_state.min_ask as f64 / 1e3 + best_offset_usdc;
 
             (&ob_client.base_ata, price)
         }
     };
 
+    // TODO dynamic
     let new_bid = (price * 1e3) as u64;
     let target_amount_wsol = target_size_usdc / price;
+    // TODO dynamic
     let target_wsol_lots = (target_amount_wsol * 1e3) as u64;
 
     let limit_price = NonZeroU64::new(new_bid).unwrap();
