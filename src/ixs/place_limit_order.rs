@@ -11,13 +11,17 @@ use crate::utils::get_unix_secs;
 
 pub fn place_limit_order(
     ob_client: &mut ObClient,
-    target_size_usdc: f64,
+    target_amount_quote: f64,
     side: Side,
     best_offset_usdc: f64,
     execute: bool,
     target_price: f64,
 ) -> anyhow::Result<Option<Vec<Instruction>>> {
 
+    /*
+    TODO extract these value dynamically
+    see price math references in readme for help
+     */
 
     // TODO dynamic
     // wsol/usdc
@@ -33,7 +37,7 @@ pub fn place_limit_order(
     let quote_lot_factor = 1e1;
 
     let price_factor = quote_d_factor * base_lot_factor / base_d_factor / quote_lot_factor;
-    let target_usdc_lots_w_fee = (target_size_usdc * quote_d_factor * 1.1) as u64; // NOTE should be negative fees...
+
 
     let (input_ata, price) = match side {
         Side::Bid => {
@@ -56,12 +60,15 @@ pub fn place_limit_order(
         }
     };
 
-    let new_bid = (price * price_factor) as u64;
-    let target_amount_wsol = target_size_usdc / price;
-    let target_wsol_lots = (target_amount_wsol * base_d_factor / base_lot_factor) as u64;
-    let limit_price = NonZeroU64::new(new_bid).unwrap();
-    let max_coin_qty = NonZeroU64::new(target_wsol_lots).unwrap(); // max wsol lots
-    let max_native_pc_qty_including_fees = NonZeroU64::new(target_usdc_lots_w_fee).unwrap(); // max usdc lots + fees
+    let limit_price_lots = (price * price_factor) as u64;
+    let target_amount_base = target_amount_quote / price;
+
+    let target_base_lots = (target_amount_base * base_d_factor / base_lot_factor) as u64;
+    let target_quote_lots_w_fee = (target_base_lots as f64 * quote_lot_factor * limit_price_lots as f64)  as u64;
+
+    let limit_price = NonZeroU64::new(limit_price_lots).unwrap();
+    let max_coin_qty = NonZeroU64::new(target_base_lots).unwrap(); // max wsol lots
+    let max_native_pc_qty_including_fees = NonZeroU64::new(target_quote_lots_w_fee).unwrap(); // max usdc lots + fees
 
     let place_order_ix = openbook_dex::instruction::new_order(
         &ob_client.market_account,
@@ -79,13 +86,13 @@ pub fn place_limit_order(
         None,
         &ob_client.program_id,
         side,
-        limit_price,
-        max_coin_qty,
+        limit_price, // price number to lots (this works but gotta be dynamic)
+        max_coin_qty, // base quantity in lots
         OrderType::PostOnly,
         random::<u64>(),
         SelfTradeBehavior::AbortTransaction,
         u16::MAX,
-        max_native_pc_qty_including_fees,
+        max_native_pc_qty_including_fees, // base_lots * price_lots * quote lots
         (get_unix_secs() + 30) as i64,
     )?;
 

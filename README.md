@@ -26,6 +26,9 @@ The Acceptance Criteria for this bounty is to implement the code snippet found i
   - https://github.com/openbook-dex/program/blob/master/dex/crank/src/lib.rs
 - TS market impl:
   - https://github.com/openbook-dex/openbook-ts/blob/master/packages/openbook/src/market.ts#L327
+- Price math
+  - https://github.com/serum-community/pyserum/blob/alpha/pyserum/market/state.py#L151
+  - https://github.com/serum-community/pyserum/blob/alpha/pyserum/market/core.py#L270
 
 ### Suggested Approach
 

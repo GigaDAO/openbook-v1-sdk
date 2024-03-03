@@ -74,14 +74,14 @@ pub fn load_ob_client() -> anyhow::Result<Option<ObClient>>{
         let quote_total = oos.native_pc_total;
         let base_free = oos.native_coin_free;
         let quote_free = oos.native_pc_free;
-        let wsol_total = base_total as f64 / 1e9;
+        let wsol_total = base_total as f64 / 1e6;
         let usdc_total = quote_total as f64 / 1e6;
 
         let claimable = base_free > 0 || quote_free > 0;
 
         println!("base total: {base_total}, quote total: {quote_total}");
         println!("base free: {base_free}, quote free: {quote_free}");
-        println!("BASE: {:6.4}", wsol_total);
+        println!("BASE (JLP): {:6.4}", wsol_total); // TODO off by 10 (is 10 instead of 100)
         println!("QUOTE(USDC): {:6.4}", usdc_total);
 
         // load keys (from u64 arr)

@@ -23,8 +23,9 @@ pub fn combo_cancel_settle_place(
     instructions.extend(ixs);
     let ixs = place_limit_order(&mut ob_client, target_size_usdc, Side::Bid, 0., false, bid_price_jlp_usdc)?.unwrap();
     instructions.extend(ixs);
-    let ixs = place_limit_order(&mut ob_client, target_size_usdc, Side::Ask, 0., false, ask_price_jlp_usdc)?.unwrap();
-    instructions.extend(ixs);
+    // TODO put this back
+    // let ixs = place_limit_order(&mut ob_client, target_size_usdc, Side::Ask, 0., false, ask_price_jlp_usdc)?.unwrap();
+    // instructions.extend(ixs);
 
     let recent_hash = ob_client.rpc_client.get_latest_blockhash()?;
     let txn = Transaction::new_signed_with_payer(
