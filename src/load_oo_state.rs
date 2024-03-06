@@ -13,6 +13,9 @@ pub struct OpenOrderState {
     pub open_bids: Vec<u128>,
     pub bids_address: Pubkey,
     pub asks_address: Pubkey,
+    pub open_asks_prices: Vec<f64>,
+    pub open_bids_prices: Vec<f64>,
+
 }
 
 pub fn load_oo_state(rpc_client: &mut RpcClient, market_state: RefMut<MarketState>, orders_key: &Pubkey) -> anyhow::Result<OpenOrderState>{
@@ -22,6 +25,9 @@ pub fn load_oo_state(rpc_client: &mut RpcClient, market_state: RefMut<MarketStat
 
     let mut open_bids = Vec::new();
     let mut open_asks = Vec::new();
+
+    let mut open_bids_prices = Vec::new();
+    let mut open_asks_prices = Vec::new();
 
     let mut max_bid = 0;
     let mut min_ask = 0;
@@ -48,12 +54,14 @@ pub fn load_oo_state(rpc_client: &mut RpcClient, market_state: RefMut<MarketStat
                     //
                     let order_id = node.order_id();
                     let price_raw = node.price().get();
-                    println!("bid: {price_raw}");
+                    let ui_price = price_raw as f64 / 1e4;
+                    tracing::debug!("bid: {price_raw}");
                     if max_bid == 0 {
                         max_bid = price_raw;
                     }
                     if &owner_address == orders_key {
                         open_bids.push(order_id);
+                        open_bids_prices.push(ui_price);
                     }
                 }
                 None => {
@@ -81,12 +89,14 @@ pub fn load_oo_state(rpc_client: &mut RpcClient, market_state: RefMut<MarketStat
                     //
                     let order_id = node.order_id();
                     let price_raw = node.price().get();
-                    println!("ask: {price_raw}");
+                    let ui_price = price_raw as f64 / 1e4;
+                    tracing::debug!("ask: {price_raw}");
                     if min_ask == 0 {
                         min_ask = price_raw;
                     }
                     if &owner_address == orders_key {
                         open_asks.push(order_id);
+                        open_asks_prices.push(ui_price);
                     }
                 }
                 None => {
@@ -96,8 +106,8 @@ pub fn load_oo_state(rpc_client: &mut RpcClient, market_state: RefMut<MarketStat
         }
     }
 
-    println!("open bids: {:?}", &open_bids);
-    println!("open asks: {:?}", &open_asks);
+    tracing::debug!("open bids: {:?}", &open_bids);
+    tracing::debug!("open asks: {:?}", &open_asks);
 
     Ok(OpenOrderState{
         min_ask,
@@ -106,5 +116,7 @@ pub fn load_oo_state(rpc_client: &mut RpcClient, market_state: RefMut<MarketStat
         open_bids,
         bids_address,
         asks_address,
+        open_asks_prices,
+        open_bids_prices,
     })
 }

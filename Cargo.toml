@@ -7,13 +7,23 @@ edition = "2021"
 
 [dependencies]
 openbook_dex = { version = "0.5.6" , features = ["test", "client"]}
-solana-rpc-client = "1.18.3"
-solana-rpc-client-api = "1.18.3"
+
+#solana-rpc-client = "1.18.3"
+#solana-rpc-client-api = "1.18.3"
+#solana-program = "1.18.3"
+#solana-sdk = "1.18.3"
+
+solana-rpc-client = "1.17.2"
+solana-rpc-client-api = "1.17.2"
+solana-program = "1.17.2"
+solana-sdk = "1.17.2"
+
+bumpalo = "=3.9.1"
+wasm-bindgen = "=0.2.90"
 anyhow = "1.0.80"
-solana-program = "1.18.3"
-solana-sdk = "1.18.3"
 dotenv = "0.15.0"
 serde_json = "1.0.114"
 anchor-spl = "0.29.0"
-rand = { version = "0.9.0-alpha.0", features = [] }
+rand = { version = "=0.8.5", features = [] }
 debug-ignore = "1.0.5"
+tracing = "0.1.40"

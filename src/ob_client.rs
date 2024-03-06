@@ -79,10 +79,10 @@ pub fn load_ob_client() -> anyhow::Result<Option<ObClient>>{
 
         let claimable = base_free > 0 || quote_free > 0;
 
-        println!("base total: {base_total}, quote total: {quote_total}");
-        println!("base free: {base_free}, quote free: {quote_free}");
-        println!("BASE (JLP): {:6.4}", wsol_total); // TODO off by 10 (is 10 instead of 100)
-        println!("QUOTE(USDC): {:6.4}", usdc_total);
+        tracing::debug!("base total: {base_total}, quote total: {quote_total}");
+        tracing::debug!("base free: {base_free}, quote free: {quote_free}");
+        tracing::debug!("BASE (JLP): {:6.4}", wsol_total); // TODO off by 10 (is 10 instead of 100)
+        tracing::debug!("QUOTE(USDC): {:6.4}", usdc_total);
 
         // load keys (from u64 arr)
         let request_queue;

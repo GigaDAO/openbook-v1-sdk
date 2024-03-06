@@ -39,7 +39,7 @@ pub fn settle_balance(ob_client: &mut ObClient, execute: bool) -> anyhow::Result
     let mut config = RpcSendTransactionConfig::default();
     config.skip_preflight = false;
     let r = ob_client.rpc_client.send_transaction_with_config(&txn, config);
-    println!("got results: {:?}", r);
+    tracing::debug!("got results: {:?}", r);
 
     Ok(None)
 }

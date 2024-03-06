@@ -9,7 +9,8 @@ use crate::ObClient;
 
 pub fn combo_cancel_settle_place(
     mut ob_client: &mut ObClient,
-    target_size_usdc: f64,
+    target_size_usdc_ask: f64,
+    target_size_usdc_bid: f64,
     bid_price_jlp_usdc: f64,
     ask_price_jlp_usdc: f64
 ) -> anyhow::Result<()> {
@@ -21,11 +22,10 @@ pub fn combo_cancel_settle_place(
     }
     let ixs = settle_balance(&mut ob_client, false)?.unwrap();
     instructions.extend(ixs);
-    let ixs = place_limit_order(&mut ob_client, target_size_usdc, Side::Bid, 0., false, bid_price_jlp_usdc)?.unwrap();
+    let ixs = place_limit_order(&mut ob_client, target_size_usdc_bid, Side::Bid, 0., false, bid_price_jlp_usdc)?.unwrap();
     instructions.extend(ixs);
-    // TODO put this back
-    // let ixs = place_limit_order(&mut ob_client, target_size_usdc, Side::Ask, 0., false, ask_price_jlp_usdc)?.unwrap();
-    // instructions.extend(ixs);
+    let ixs = place_limit_order(&mut ob_client, target_size_usdc_ask, Side::Ask, 0., false, ask_price_jlp_usdc)?.unwrap();
+    instructions.extend(ixs);
 
     let recent_hash = ob_client.rpc_client.get_latest_blockhash()?;
     let txn = Transaction::new_signed_with_payer(
@@ -38,7 +38,7 @@ pub fn combo_cancel_settle_place(
     let mut config = RpcSendTransactionConfig::default();
     config.skip_preflight = false;
     let r = ob_client.rpc_client.send_transaction_with_config(&txn, config);
-    println!("got results: {:?}", r);
+    tracing::debug!("got results: {:?}", r);
 
     Ok(())
 }

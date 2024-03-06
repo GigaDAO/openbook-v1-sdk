@@ -58,7 +58,7 @@ pub fn cancel_all_limit_orders(ob_client: &mut ObClient, execute: bool) -> anyho
     let mut config = RpcSendTransactionConfig::default();
     config.skip_preflight = false;
     let r = ob_client.rpc_client.send_transaction_with_config(&txn, config);
-    println!("got results: {:?}", r);
+    tracing::debug!("got results: {:?}", r);
 
     Ok(None)
 }

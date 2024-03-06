@@ -23,7 +23,7 @@ pub fn initialize_new_oos_account(
         &market_account,
         None,
     )?;
-    println!("got oos account: {:?}", orders_key.pubkey());
+    tracing::debug!("got oos account: {:?}", orders_key.pubkey());
 
     let mut instructions = Vec::new();
     instructions.push(create_oos_account_ix);
@@ -38,7 +38,7 @@ pub fn initialize_new_oos_account(
     );
 
     let r = rpc_client.send_transaction(&txn);
-    println!("got results: {:?}", r);
+    tracing::debug!("got results: {:?}", r);
 
     Ok(())
 }

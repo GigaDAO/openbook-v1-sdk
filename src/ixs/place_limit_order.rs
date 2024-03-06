@@ -23,7 +23,6 @@ pub fn place_limit_order(
     see price math references in readme for help
      */
 
-    // TODO dynamic
     // wsol/usdc
     // let base_d_factor = 1e9;
     // let quote_d_factor = 1e6;
@@ -115,7 +114,7 @@ pub fn place_limit_order(
     let mut config = RpcSendTransactionConfig::default();
     config.skip_preflight = false;
     let r = ob_client.rpc_client.send_transaction_with_config(&txn, config);
-    println!("got results: {:?}", r);
+    tracing::debug!("got results: {:?}", r);
 
     Ok(None)
 }
