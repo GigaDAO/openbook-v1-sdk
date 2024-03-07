@@ -1,5 +1,6 @@
 use openbook_dex::matching::Side;
 use solana_rpc_client_api::config::RpcSendTransactionConfig;
+use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::signature::Signer;
 use solana_sdk::transaction::Transaction;
 use crate::ixs::cancel_limit_order::cancel_all_limit_orders;
@@ -49,6 +50,21 @@ pub fn combo_cancel_settle_place_bid(
 ) -> anyhow::Result<()> {
 
     let mut instructions = Vec::new();
+
+
+    let r = ob_client.rpc_client.get_recent_prioritization_fees(&[]).unwrap();
+    let mut max_fee = 1;
+    for f in r {
+        if f.prioritization_fee > max_fee {
+            max_fee = f.prioritization_fee;
+        }
+    }
+
+    let budget_ix = ComputeBudgetInstruction::set_compute_unit_limit(800_000);
+    let fee_ix = ComputeBudgetInstruction::set_compute_unit_price(max_fee);
+    instructions.push(budget_ix);
+    instructions.push(fee_ix);
+
     let ixs = cancel_all_limit_orders(&mut ob_client, false)?;
     if let Some(ixs) = ixs {
         instructions.extend(ixs);
