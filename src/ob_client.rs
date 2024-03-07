@@ -38,7 +38,7 @@ pub fn load_ob_client() -> anyhow::Result<Option<ObClient>>{
     let wsol_ata = Pubkey::from_str(wsol_ata_str.as_str()).unwrap();
 
     let account_info = create_account_info_from_account(&mut account, &market_account_binding, &program_id_binding, false, false);
-    let oo_state;
+    let mut oo_state;
     {
         let market_state = MarketState::load(
             &account_info,
@@ -76,6 +76,8 @@ pub fn load_ob_client() -> anyhow::Result<Option<ObClient>>{
         let quote_free = oos.native_pc_free;
         let wsol_total = base_total as f64 / 1e6;
         let usdc_total = quote_total as f64 / 1e6;
+        oo_state.base_total = wsol_total;
+        oo_state.quote_total = usdc_total;
 
         let claimable = base_free > 0 || quote_free > 0;
 

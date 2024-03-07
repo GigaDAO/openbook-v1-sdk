@@ -54,10 +54,10 @@ pub fn test_place_and_cancel() -> anyhow::Result<()>{
     if let Some(mut ob_client) = ob_client {
 
         if ob_client.claimable {
-            settle_balance(&mut ob_client, true)?;
+            // settle_balance(&mut ob_client, true)?;
         }
 
-        // place_limit_order(&mut ob_client, 100., Side::Bid, 0.2, true, 2.3)?;
+        place_limit_order(&mut ob_client, 240., Side::Bid, 0.0, true, 2.3)?;
         // place_limit_order(&mut ob_client, 100., Side::Ask, 0.001, true, 2.345)?;
 
         // place_limit_order(&mut ob_client, 1., Side::Bid, 30.)?;

@@ -15,6 +15,8 @@ pub struct OpenOrderState {
     pub asks_address: Pubkey,
     pub open_asks_prices: Vec<f64>,
     pub open_bids_prices: Vec<f64>,
+    pub base_total: f64,
+    pub quote_total: f64,
 
 }
 
@@ -118,5 +120,7 @@ pub fn load_oo_state(rpc_client: &mut RpcClient, market_state: RefMut<MarketStat
         asks_address,
         open_asks_prices,
         open_bids_prices,
+        base_total: 0.,
+        quote_total: 0.,
     })
 }

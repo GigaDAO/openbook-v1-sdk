@@ -42,3 +42,34 @@ pub fn combo_cancel_settle_place(
 
     Ok(())
 }
+pub fn combo_cancel_settle_place_bid(
+    mut ob_client: &mut ObClient,
+    target_size_usdc_bid: f64,
+    bid_price_jlp_usdc: f64,
+) -> anyhow::Result<()> {
+
+    let mut instructions = Vec::new();
+    let ixs = cancel_all_limit_orders(&mut ob_client, false)?;
+    if let Some(ixs) = ixs {
+        instructions.extend(ixs);
+    }
+    let ixs = settle_balance(&mut ob_client, false)?.unwrap();
+    instructions.extend(ixs);
+    let ixs = place_limit_order(&mut ob_client, target_size_usdc_bid, Side::Bid, 0., false, bid_price_jlp_usdc)?.unwrap();
+    instructions.extend(ixs);
+
+    let recent_hash = ob_client.rpc_client.get_latest_blockhash()?;
+    let txn = Transaction::new_signed_with_payer(
+        &instructions,
+        Some(&ob_client.keypair.pubkey()),
+        &[&ob_client.keypair],
+        recent_hash,
+    );
+
+    let mut config = RpcSendTransactionConfig::default();
+    config.skip_preflight = false;
+    let r = ob_client.rpc_client.send_transaction_with_config(&txn, config);
+    tracing::info!("got results: {:?}", r);
+
+    Ok(())
+}
