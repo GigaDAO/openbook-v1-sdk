@@ -5,7 +5,7 @@ use solana_sdk::signature::Signer;
 use solana_sdk::transaction::Transaction;
 use crate::ObClient;
 
-pub fn cancel_all_limit_orders(ob_client: &mut ObClient, execute: bool) -> anyhow::Result<Option<Vec<Instruction>>> {
+pub async fn cancel_all_limit_orders(ob_client: &mut ObClient, execute: bool) -> anyhow::Result<Option<Vec<Instruction>>> {
 
     let mut ixs = Vec::new();
 
@@ -47,7 +47,7 @@ pub fn cancel_all_limit_orders(ob_client: &mut ObClient, execute: bool) -> anyho
         return Ok(Some(ixs));
     }
 
-    let recent_hash = ob_client.rpc_client.get_latest_blockhash()?;
+    let recent_hash = ob_client.rpc_client.get_latest_blockhash().await?;
     let txn = Transaction::new_signed_with_payer(
         &ixs,
         Some(&ob_client.keypair.pubkey()),
@@ -57,7 +57,7 @@ pub fn cancel_all_limit_orders(ob_client: &mut ObClient, execute: bool) -> anyho
 
     let mut config = RpcSendTransactionConfig::default();
     config.skip_preflight = false;
-    let r = ob_client.rpc_client.send_transaction_with_config(&txn, config);
+    let r = ob_client.rpc_client.send_transaction_with_config(&txn, config).await;
     tracing::debug!("got results: {:?}", r);
 
     Ok(None)

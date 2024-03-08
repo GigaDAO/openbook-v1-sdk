@@ -5,13 +5,13 @@ use openbook_dex::state::MarketState;
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::Instruction;
 use solana_program::pubkey::Pubkey;
-use solana_rpc_client::rpc_client::RpcClient;
+use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::account::Account;
 use solana_sdk::bs58;
 use solana_sdk::signature::{Keypair, Signer};
 use crate::ObClient;
 
-pub fn create_dex_account(
+pub async fn create_dex_account(
     client: &RpcClient,
     program_id: &Pubkey,
     payer: &Pubkey,
@@ -22,14 +22,14 @@ pub fn create_dex_account(
     let create_account_instr = solana_sdk::system_instruction::create_account(
         payer,
         &key.pubkey(),
-        client.get_minimum_balance_for_rent_exemption(len)?,
+        client.get_minimum_balance_for_rent_exemption(len).await?,
         len as u64,
         program_id,
     );
     Ok((key, create_account_instr))
 }
 
-pub fn get_bids_asks_addresses(market_state: &RefMut<MarketState>) -> (Pubkey, Pubkey) {
+pub fn get_bids_asks_addresses(market_state: &mut MarketState) -> (Pubkey, Pubkey) {
 
     let mut bytes: [u8; 32] = [0; 32];
     for i in 0..4 {
@@ -83,13 +83,13 @@ pub fn get_unix_secs() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
 }
 
-pub fn get_equity(ob_client: &mut ObClient) -> anyhow::Result<(f64, f64)>{
+pub async fn get_equity(ob_client: &mut ObClient) -> anyhow::Result<(f64, f64)>{
 
     let ba = &ob_client.base_ata;
     let qa = &ob_client.quote_ata;
 
-    let bb = ob_client.rpc_client.get_token_account_balance(ba)?.ui_amount.unwrap();
-    let qb = ob_client.rpc_client.get_token_account_balance(qa)?.ui_amount.unwrap();
+    let bb = ob_client.rpc_client.get_token_account_balance(ba).await?.ui_amount.unwrap();
+    let qb = ob_client.rpc_client.get_token_account_balance(qa).await?.ui_amount.unwrap();
 
     Ok((bb, qb))
 

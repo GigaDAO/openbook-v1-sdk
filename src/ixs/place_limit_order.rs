@@ -9,7 +9,7 @@ use solana_sdk::transaction::Transaction;
 use crate::ObClient;
 use crate::utils::get_unix_secs;
 
-pub fn place_limit_order(
+pub async fn place_limit_order(
     ob_client: &mut ObClient,
     target_amount_quote: f64,
     side: Side,
@@ -103,7 +103,7 @@ pub fn place_limit_order(
         return Ok(Some(instructions));
     }
 
-    let recent_hash = ob_client.rpc_client.get_latest_blockhash()?;
+    let recent_hash = ob_client.rpc_client.get_latest_blockhash().await?;
     let txn = Transaction::new_signed_with_payer(
         &instructions,
         Some(&ob_client.keypair.pubkey()),
@@ -113,7 +113,7 @@ pub fn place_limit_order(
 
     let mut config = RpcSendTransactionConfig::default();
     config.skip_preflight = false;
-    let r = ob_client.rpc_client.send_transaction_with_config(&txn, config);
+    let r = ob_client.rpc_client.send_transaction_with_config(&txn, config).await;
     tracing::debug!("got results: {:?}", r);
 
     Ok(None)

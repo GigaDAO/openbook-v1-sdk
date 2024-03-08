@@ -1,11 +1,11 @@
 use std::cell::RefMut;
 use openbook_dex::state::MarketState;
 use solana_program::pubkey::Pubkey;
-use solana_rpc_client::rpc_client::RpcClient;
+use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use crate::{create_account_info_from_account, OPENBOOK_V1_PROGRAM_ID};
 use crate::utils::get_bids_asks_addresses;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OpenOrderState {
     pub min_ask: u64,
     pub max_bid: u64,
@@ -20,7 +20,7 @@ pub struct OpenOrderState {
 
 }
 
-pub fn load_oo_state(rpc_client: &mut RpcClient, market_state: RefMut<MarketState>, orders_key: &Pubkey) -> anyhow::Result<OpenOrderState>{
+pub async fn load_oo_state(rpc_client: &mut RpcClient, mut market_state: MarketState, orders_key: &Pubkey) -> anyhow::Result<OpenOrderState>{
 
     let bids_address;
     let asks_address;
@@ -35,11 +35,11 @@ pub fn load_oo_state(rpc_client: &mut RpcClient, market_state: RefMut<MarketStat
     let mut min_ask = 0;
 
     let program_id_binding = OPENBOOK_V1_PROGRAM_ID.parse().unwrap();
-    (bids_address, asks_address) = get_bids_asks_addresses(&market_state);
+    (bids_address, asks_address) = get_bids_asks_addresses(&mut market_state);
 
     // load bids
     {
-        let mut bids_account = rpc_client.get_account(&bids_address)?;
+        let mut bids_account = rpc_client.get_account(&bids_address).await?;
         let mut bids_info = create_account_info_from_account(&mut bids_account, &bids_address, &program_id_binding, false, false);
         let mut bids = market_state.load_bids_mut(&mut bids_info)?;
         loop {
@@ -75,7 +75,7 @@ pub fn load_oo_state(rpc_client: &mut RpcClient, market_state: RefMut<MarketStat
 
     // load asks
     {
-        let mut asks_accounts = rpc_client.get_account(&asks_address)?;
+        let mut asks_accounts = rpc_client.get_account(&asks_address).await?;
         let mut asks_info = create_account_info_from_account(&mut asks_accounts, &asks_address, &program_id_binding, false, false);
         let mut asks = market_state.load_asks_mut(&mut asks_info)?;
         loop {

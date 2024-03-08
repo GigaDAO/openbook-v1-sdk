@@ -4,7 +4,7 @@ use solana_sdk::signature::Signer;
 use solana_sdk::transaction::Transaction;
 use crate::ObClient;
 
-pub fn settle_balance(ob_client: &mut ObClient, execute: bool) -> anyhow::Result<Option<Vec<Instruction>>> {
+pub async fn settle_balance(ob_client: &mut ObClient, execute: bool) -> anyhow::Result<Option<Vec<Instruction>>> {
 
     let ix = openbook_dex::instruction::settle_funds(
         &ob_client.program_id,
@@ -28,7 +28,7 @@ pub fn settle_balance(ob_client: &mut ObClient, execute: bool) -> anyhow::Result
         return Ok(Some(instructions));
     }
 
-    let recent_hash = ob_client.rpc_client.get_latest_blockhash()?;
+    let recent_hash = ob_client.rpc_client.get_latest_blockhash().await?;
     let txn = Transaction::new_signed_with_payer(
         &instructions,
         Some(&ob_client.keypair.pubkey()),
@@ -38,7 +38,7 @@ pub fn settle_balance(ob_client: &mut ObClient, execute: bool) -> anyhow::Result
 
     let mut config = RpcSendTransactionConfig::default();
     config.skip_preflight = false;
-    let r = ob_client.rpc_client.send_transaction_with_config(&txn, config);
+    let r = ob_client.rpc_client.send_transaction_with_config(&txn, config).await;
     tracing::debug!("got results: {:?}", r);
 
     Ok(None)
