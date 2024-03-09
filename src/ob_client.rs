@@ -126,6 +126,7 @@ pub async fn load_ob_client(conf: Option<EnvConfig>) -> anyhow::Result<LoadResul
                     None,
                 )?.deref_mut().clone();
 
+                // TODO collect details here
                 base_total = oos.native_coin_total;
                 quote_total = oos.native_pc_total;
                 base_free = oos.native_coin_free;

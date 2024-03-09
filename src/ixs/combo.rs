@@ -1,5 +1,6 @@
 use openbook_dex::matching::Side;
 use solana_rpc_client_api::config::RpcSendTransactionConfig;
+use solana_sdk::commitment_config::{CommitmentConfig, CommitmentLevel};
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::signature::Signer;
 use solana_sdk::transaction::Transaction;
@@ -41,24 +42,22 @@ pub async fn combo_cancel_settle_place(
     let ixs = place_limit_order(&mut ob_client, target_size_usdc_ask, Side::Ask, 0., false, ask_price_jlp_usdc).await?.unwrap();
     instructions.extend(ixs);
 
-    let recent_hash = ob_client.rpc_client.get_latest_blockhash().await?;
+    let recent_hash = ob_client.rpc_client.get_latest_blockhash_with_commitment(CommitmentConfig::confirmed()).await?;
     let txn = Transaction::new_signed_with_payer(
         &instructions,
         Some(&ob_client.keypair.pubkey()),
         &[&ob_client.keypair],
-        recent_hash,
+        recent_hash.0,
     );
 
     let mut config = RpcSendTransactionConfig::default();
-    config.skip_preflight = false;
-    // let r = ob_client.rpc_client.send_transaction_with_config(&txn, config).await;
+    config.skip_preflight = true;
+    config.preflight_commitment = Some(CommitmentLevel::Confirmed);
     let kp_str = ob_client.keypair.pubkey().to_string().clone();
     match ob_client.rpc_client.send_transaction_with_config(&txn, config).await{
         Ok(_) => {}
         Err(err) => {tracing::error!("err combo'ing: {err}, {}", kp_str);}
     }
-
-    // tracing::info!("got results: {:?}", r);
 
     Ok(())
 }
@@ -96,22 +95,24 @@ pub async fn combo_cancel_settle_place_bid(
         instructions.extend(ixs);
     }
 
-    let recent_hash = ob_client.rpc_client.get_latest_blockhash().await?;
+    let recent_hash = ob_client.rpc_client.get_latest_blockhash_with_commitment(CommitmentConfig::confirmed()).await?;
     let txn = Transaction::new_signed_with_payer(
         &instructions,
         Some(&ob_client.keypair.pubkey()),
         &[&ob_client.keypair],
-        recent_hash,
+        recent_hash.0,
     );
-
     let mut config = RpcSendTransactionConfig::default();
-    config.skip_preflight = false;
-    // let r = ob_client.rpc_client.send_transaction_with_config(&txn, config).await;
-    // tracing::info!("got results: {:?}", r);
+    config.skip_preflight = true;
+    config.preflight_commitment = Some(CommitmentLevel::Confirmed);
     let kp_str = ob_client.keypair.pubkey().to_string().clone();
     match ob_client.rpc_client.send_transaction_with_config(&txn, config).await{
         Ok(_) => {}
-        Err(err) => {tracing::error!("err bidding: {err}, {}", kp_str);}
+        Err(err) => {tracing::error!("err bidding: {err}, {}", kp_str);
+            let e = err.get_transaction_error();
+            if let Some(e) = e {
+                tracing::error!("got tx err: {e}"); }
+        }
     }
 
     Ok(())
@@ -162,7 +163,7 @@ pub async fn combo_cancel_settle_place_ask(
     );
 
     let mut config = RpcSendTransactionConfig::default();
-    config.skip_preflight = false;
+    config.skip_preflight = true;
     let kp_str = ob_client.keypair.pubkey().to_string().clone();
     match ob_client.rpc_client.send_transaction_with_config(&txn, config).await{
         Ok(_) => {}
@@ -194,19 +195,26 @@ pub async fn combo_cancel_settle(
     }
     let ixs = settle_balance(&mut ob_client, false).await?.unwrap();
     instructions.extend(ixs);
-    let recent_hash = ob_client.rpc_client.get_latest_blockhash().await?;
+
+    // TODO add commitment to this
+    let recent_hash = ob_client.rpc_client.get_latest_blockhash_with_commitment(CommitmentConfig::confirmed()).await?;
     let txn = Transaction::new_signed_with_payer(
         &instructions,
         Some(&ob_client.keypair.pubkey()),
         &[&ob_client.keypair],
-        recent_hash,
+        recent_hash.0,
     );
+
+    // TODO add commitment level
     let mut config = RpcSendTransactionConfig::default();
-    config.skip_preflight = false;
+    config.skip_preflight = true;
+    config.preflight_commitment = Some(CommitmentLevel::Confirmed);
     let kp_str = ob_client.keypair.pubkey().to_string().clone();
+
+    // TODO should definitely add retry logic
     match ob_client.rpc_client.send_transaction_with_config(&txn, config).await {
-        Ok(_) => {}
-        Err(e) => {tracing::error!("err canceling: {e}\npk: {}", kp_str);}
+        Ok(v) => {println!("{:?}", v)}
+        Err(e) => {println!("err canceling: {e}\npk: {}", kp_str);}
     }
     Ok(())
 }
