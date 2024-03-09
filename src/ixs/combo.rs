@@ -51,8 +51,14 @@ pub async fn combo_cancel_settle_place(
 
     let mut config = RpcSendTransactionConfig::default();
     config.skip_preflight = false;
-    let r = ob_client.rpc_client.send_transaction_with_config(&txn, config).await;
-    tracing::info!("got results: {:?}", r);
+    // let r = ob_client.rpc_client.send_transaction_with_config(&txn, config).await;
+    let kp_str = ob_client.keypair.pubkey().to_string().clone();
+    match ob_client.rpc_client.send_transaction_with_config(&txn, config).await{
+        Ok(_) => {}
+        Err(err) => {tracing::error!("err combo'ing: {err}, {}", kp_str);}
+    }
+
+    // tracing::info!("got results: {:?}", r);
 
     Ok(())
 }
@@ -84,8 +90,11 @@ pub async fn combo_cancel_settle_place_bid(
     }
     let ixs = settle_balance(&mut ob_client, false).await?.unwrap();
     instructions.extend(ixs);
-    let ixs = place_limit_order(&mut ob_client, target_size_usdc_bid, Side::Bid, 0., false, bid_price_jlp_usdc).await?.unwrap();
-    instructions.extend(ixs);
+
+    let ixs = place_limit_order(&mut ob_client, target_size_usdc_bid, Side::Bid, 0., false, bid_price_jlp_usdc).await?;
+    if let Some(ixs) = ixs {
+        instructions.extend(ixs);
+    }
 
     let recent_hash = ob_client.rpc_client.get_latest_blockhash().await?;
     let txn = Transaction::new_signed_with_payer(
@@ -97,11 +106,18 @@ pub async fn combo_cancel_settle_place_bid(
 
     let mut config = RpcSendTransactionConfig::default();
     config.skip_preflight = false;
-    let r = ob_client.rpc_client.send_transaction_with_config(&txn, config).await;
-    tracing::info!("got results: {:?}", r);
+    // let r = ob_client.rpc_client.send_transaction_with_config(&txn, config).await;
+    // tracing::info!("got results: {:?}", r);
+    let kp_str = ob_client.keypair.pubkey().to_string().clone();
+    match ob_client.rpc_client.send_transaction_with_config(&txn, config).await{
+        Ok(_) => {}
+        Err(err) => {tracing::error!("err bidding: {err}, {}", kp_str);}
+    }
 
     Ok(())
 }
+
+// TODO consolidate all these helpers...
 pub async fn combo_cancel_settle_place_ask(
     mut ob_client: &mut ObClient,
     target_size_usdc_ask: f64,
@@ -128,10 +144,14 @@ pub async fn combo_cancel_settle_place_ask(
     if let Some(ixs) = ixs {
         instructions.extend(ixs);
     }
+
     let ixs = settle_balance(&mut ob_client, false).await?.unwrap();
     instructions.extend(ixs);
-    let ixs = place_limit_order(&mut ob_client, target_size_usdc_ask, Side::Ask, 0., false, ask_price_jlp_usdc).await?.unwrap();
-    instructions.extend(ixs);
+
+    let ixs = place_limit_order(&mut ob_client, target_size_usdc_ask, Side::Ask, 0., false, ask_price_jlp_usdc).await?;
+    if let Some(ixs) = ixs {
+        instructions.extend(ixs);
+    }
 
     let recent_hash = ob_client.rpc_client.get_latest_blockhash().await?;
     let txn = Transaction::new_signed_with_payer(
@@ -143,8 +163,50 @@ pub async fn combo_cancel_settle_place_ask(
 
     let mut config = RpcSendTransactionConfig::default();
     config.skip_preflight = false;
-    let r = ob_client.rpc_client.send_transaction_with_config(&txn, config).await;
-    tracing::info!("got results: {:?}", r);
+    let kp_str = ob_client.keypair.pubkey().to_string().clone();
+    match ob_client.rpc_client.send_transaction_with_config(&txn, config).await{
+        Ok(_) => {}
+        Err(err) => {tracing::error!("err asking: {err}, {}", kp_str);}
+    }
+    // tracing::info!("got results: {:?}", r);
 
+    Ok(())
+}
+pub async fn combo_cancel_settle(
+    mut ob_client: &mut ObClient,
+) -> anyhow::Result<()> {
+    let mut instructions = Vec::new();
+    let r = ob_client.rpc_client.get_recent_prioritization_fees(&[]).await.unwrap();
+    let mut max_fee = 1;
+    for f in r {
+        if f.prioritization_fee > max_fee {
+            max_fee = f.prioritization_fee;
+        }
+    }
+    let budget_ix = ComputeBudgetInstruction::set_compute_unit_limit(800_000);
+    let fee_ix = ComputeBudgetInstruction::set_compute_unit_price(max_fee);
+    instructions.push(budget_ix);
+    instructions.push(fee_ix);
+
+    let ixs = cancel_all_limit_orders(&mut ob_client, false).await?;
+    if let Some(ixs) = ixs {
+        instructions.extend(ixs);
+    }
+    let ixs = settle_balance(&mut ob_client, false).await?.unwrap();
+    instructions.extend(ixs);
+    let recent_hash = ob_client.rpc_client.get_latest_blockhash().await?;
+    let txn = Transaction::new_signed_with_payer(
+        &instructions,
+        Some(&ob_client.keypair.pubkey()),
+        &[&ob_client.keypair],
+        recent_hash,
+    );
+    let mut config = RpcSendTransactionConfig::default();
+    config.skip_preflight = false;
+    let kp_str = ob_client.keypair.pubkey().to_string().clone();
+    match ob_client.rpc_client.send_transaction_with_config(&txn, config).await {
+        Ok(_) => {}
+        Err(e) => {tracing::error!("err canceling: {e}\npk: {}", kp_str);}
+    }
     Ok(())
 }

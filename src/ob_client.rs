@@ -103,6 +103,8 @@ pub async fn load_ob_client(conf: Option<EnvConfig>) -> anyhow::Result<LoadResul
         let coin_vault;
         let pc_vault;
         let claimable;
+        let base_claimable;
+        let quote_claimable;
         let vault_signer_key;
 
         {
@@ -134,6 +136,8 @@ pub async fn load_ob_client(conf: Option<EnvConfig>) -> anyhow::Result<LoadResul
 
 
             claimable = base_free > 0 || quote_free > 0;
+            base_claimable = base_free > 0;
+            quote_claimable = quote_free > 0;
 
             tracing::debug!("base total: {base_total}, quote total: {quote_total}");
             tracing::debug!("base free: {base_free}, quote free: {quote_free}");
@@ -202,6 +206,8 @@ pub async fn load_ob_client(conf: Option<EnvConfig>) -> anyhow::Result<LoadResul
             vault_signer_key,
             oo_state,
             claimable,
+            base_claimable,
+            quote_claimable,
         }
 
     }

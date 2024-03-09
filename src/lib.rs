@@ -44,6 +44,8 @@ pub struct ObClient {
     pub vault_signer_key: Pubkey,
     pub oo_state: OpenOrderState,
     pub claimable: bool,
+    pub base_claimable: bool,
+    pub quote_claimable: bool,
 }
 
 

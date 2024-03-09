@@ -65,6 +65,14 @@ pub async fn place_limit_order(
     let target_base_lots = (target_amount_base * base_d_factor / base_lot_factor) as u64;
     let target_quote_lots_w_fee = (target_base_lots as f64 * quote_lot_factor * limit_price_lots as f64)  as u64;
 
+    // tracing::info!("using limit price lots: {limit_price_lots}");
+    // tracing::info!("using target base lots: {target_base_lots}");
+
+    if target_base_lots == 0 {
+        tracing::error!("got zero base lots, and quote: {target_amount_quote}");
+        return Ok(None);
+    }
+
     let limit_price = NonZeroU64::new(limit_price_lots).unwrap();
     let max_coin_qty = NonZeroU64::new(target_base_lots).unwrap(); // max wsol lots
     let max_native_pc_qty_including_fees = NonZeroU64::new(target_quote_lots_w_fee).unwrap(); // max usdc lots + fees
