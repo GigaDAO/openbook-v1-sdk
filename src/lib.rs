@@ -2,82 +2,89 @@
 COIN == BASE
 PC == QUOTE
  */
-pub mod load_oo_state;
-mod initialize_oo_account;
 pub mod utils;
-pub mod ob_client;
 pub mod ixs;
 
 use std::ops::DerefMut;
 use std::str::FromStr;
-use debug_ignore::DebugIgnore;
 use openbook_dex::critbit::{SlabView};
-use openbook_dex::matching::Side;
 use solana_program::{
     pubkey::Pubkey,
 };
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
-use solana_sdk::signature::{Keypair, Signer};
-use crate::initialize_oo_account::initialize_new_oos_account;
-use crate::ixs::cancel_limit_order::cancel_all_limit_orders;
-use crate::ixs::place_limit_order::place_limit_order;
-use crate::ixs::settle_balance::settle_balance;
-use crate::load_oo_state::{OpenOrderState};
-use crate::ob_client::load_ob_client;
-use crate::utils::{create_account_info_from_account};
+use solana_sdk::commitment_config::CommitmentConfig;
+use solana_sdk::signature::Keypair;
+use crate::utils::read_keypair;
 
 const OPENBOOK_V1_PROGRAM_ID: &str = "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX";
 
-#[derive(Debug)]
 pub struct ObClient {
-    pub rpc_client: DebugIgnore<RpcClient>,
     pub market_account: Pubkey,
     pub open_orders_account: Pubkey,
     pub request_queue: Pubkey,
     pub event_queue: Pubkey,
     pub base_ata: Pubkey,
     pub quote_ata: Pubkey,
-    pub keypair: Keypair,
     pub coin_vault: Pubkey, // base
     pub pc_vault: Pubkey, //quote
     pub program_id: Pubkey,
     pub vault_signer_key: Pubkey,
-    pub oo_state: OpenOrderState,
-    pub claimable: bool,
-    pub base_claimable: bool,
-    pub quote_claimable: bool,
+    pub bids_address: Pubkey,
+    pub asks_address: Pubkey,
+    pub rpc_client: RpcClient,
+    pub keypair: Keypair,
 }
 
-
-pub async fn test_place_and_cancel() -> anyhow::Result<()>{
-
-    // let mut ob_client = load_ob_client(None).await?;
-    //
-    //
-    //     if ob_client.claimable {
-    //         settle_balance(&mut ob_client, true).await?;
-    //     }
-
-        // place_limit_order(&mut ob_client, 240., Side::Bid, 0.0, true, 2.3)?;
-        // place_limit_order(&mut ob_client, 100., Side::Ask, 0.001, true, 2.345)?;
-
-        // place_limit_order(&mut ob_client, 1., Side::Bid, 30.)?;
-        // place_limit_order(&mut ob_client, 1., Side::Ask, 30.)?;
-        //
-        // cancel_all_limit_orders(&mut ob_client, true)?;
-
-    Ok(())
-}
-
-
-
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        // test_place_and_cancel().unwrap();
+impl ObClient {
+    pub fn load_hard_coded() -> Self {
+        dotenv::dotenv().ok();
+        let triton_url = std::env::var("RPC_URL").unwrap();
+        let rpc_client = RpcClient::new_with_commitment(triton_url, CommitmentConfig::confirmed());
+        let keypair = read_keypair(&std::env::var("KEY_PATH").unwrap());
+        Self {
+            rpc_client,
+            keypair,
+            bids_address: Pubkey::from_str("E9jHtpUqgTF2Ln8UhmyRXRNJsGKuNMVaSVaGowk9Vvr6").unwrap(),
+            asks_address: Pubkey::from_str("6Kus1PbGpDRZ8R57PG2UM5b5vmyMp9wAHsXzsFQfPzsZ").unwrap(),
+            market_account: Pubkey::from_str("ASUyMMNBpFzpW3zDSPYdDVggKajq1DMKFFPK1JS9hoSR").unwrap(),
+            open_orders_account: Pubkey::from_str("Cg9qSVSoqCgmzk7sf76fqV5naxb2kHcBncSiGuYZCiyg").unwrap(),
+            request_queue: Pubkey::from_str("7oGLtLJbcaTWQprDoYyCBTUW5n598qYRQP6KKw5DML4L").unwrap(),
+            event_queue:  Pubkey::from_str("FM1a4He7jBDBQXfbUK35xpwf6tx2DfRYAzX48AkVcNqP").unwrap(),
+            base_ata:  Pubkey::from_str("9vTKnac15XTDYDpxcXEncBRwJ6Ctn5crD11deHKDTqn").unwrap(),
+            quote_ata: Pubkey::from_str("2AuYk75jwcGBdqtdJiZN61oSqLEPbYwsh4XkgEjFMNiE").unwrap(),
+            coin_vault: Pubkey::from_str("BNSehB5QgfqfUGa8N2GW7qwjGQD8sUjNUzTSEcmmupZL").unwrap(),
+            pc_vault:  Pubkey::from_str("HstJUT5jehxW29UMUjockEWTVhwUhwxk1WQhHzPcZJXt").unwrap(),
+            program_id: Pubkey::from_str("srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX").unwrap(),
+            vault_signer_key:  Pubkey::from_str("G26Hizvx9zttK3Nu3n9oQouEoK89aeSqUQw6AKx4oWic").unwrap(),
+        }
     }
 }
+
+
+// pub async fn test_place_and_cancel() -> anyhow::Result<()>{
+//
+//     let mut ob_client = load_ob_client(None).await?;
+//
+//     match ob_client {
+//         LoadResult::Client(client) => {
+//             println!("got client: {:?}", client);
+//         }
+//         LoadResult::OpenOrdersAddress(_) => {}
+//     }
+//
+//     Ok(())
+// }
+//
+//
+//
+//
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//
+//     #[tokio::test]
+//     async fn it_works() {
+//         test_place_and_cancel().await.unwrap();
+//
+//     }
+// }

@@ -4,12 +4,12 @@ use solana_sdk::signature::Signer;
 use solana_sdk::transaction::Transaction;
 use crate::ObClient;
 
-pub async fn settle_balance(ob_client: &mut ObClient, execute: bool) -> anyhow::Result<Option<Vec<Instruction>>> {
+pub async fn settle_balance(ob_client: &mut ObClient) -> anyhow::Result<Instruction> {
 
     let ix = openbook_dex::instruction::settle_funds(
         &ob_client.program_id,
         &ob_client.market_account,
-        &anchor_spl::token::ID,
+        &spl_token::ID,
         &ob_client.open_orders_account,
         &ob_client.keypair.pubkey(),
         &ob_client.coin_vault,
@@ -21,25 +21,23 @@ pub async fn settle_balance(ob_client: &mut ObClient, execute: bool) -> anyhow::
     )?;
 
     // place order
-    let mut instructions = Vec::new();
-    instructions.push(ix);
+    // let mut instructions = Vec::new();
+    // instructions.push(ix);
 
-    if ! execute {
-        return Ok(Some(instructions));
-    }
+    Ok(ix)
 
-    let recent_hash = ob_client.rpc_client.get_latest_blockhash().await?;
-    let txn = Transaction::new_signed_with_payer(
-        &instructions,
-        Some(&ob_client.keypair.pubkey()),
-        &[&ob_client.keypair],
-        recent_hash,
-    );
-
-    let mut config = RpcSendTransactionConfig::default();
-    config.skip_preflight = false;
-    let r = ob_client.rpc_client.send_transaction_with_config(&txn, config).await;
-    tracing::debug!("got results: {:?}", r);
-
-    Ok(None)
+    // let recent_hash = ob_client.rpc_client.get_latest_blockhash().await?;
+    // let txn = Transaction::new_signed_with_payer(
+    //     &instructions,
+    //     Some(&ob_client.keypair.pubkey()),
+    //     &[&ob_client.keypair],
+    //     recent_hash,
+    // );
+    //
+    // let mut config = RpcSendTransactionConfig::default();
+    // config.skip_preflight = false;
+    // let r = ob_client.rpc_client.send_transaction_with_config(&txn, config).await;
+    // tracing::debug!("got results: {:?}", r);
+    //
+    // Ok(None)
 }
