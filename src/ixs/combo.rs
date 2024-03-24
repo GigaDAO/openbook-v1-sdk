@@ -9,9 +9,12 @@ use crate::ixs::place_limit_order::place_limit_order;
 use crate::ixs::settle_balance::settle_balance;
 use crate::ObClient;
 
+#[derive(Debug)]
 pub enum ComboVariants {
     Place,
     SettlePlace,
+    Settle,
+    CancelSettle,
     CancelSettlePlace,
 }
 
@@ -23,6 +26,8 @@ pub async fn combo_cancel_settle_place(
     oids: Vec<u128>,
     combo: ComboVariants,
 ) -> anyhow::Result<()> {
+
+    tracing::info!("running rpc with combo: {:?}", combo);
 
     // add priority and budget fee
     let mut instructions = Vec::new();
@@ -41,6 +46,18 @@ pub async fn combo_cancel_settle_place(
     match combo {
         ComboVariants::Place => {
             let ix = place_limit_order(&mut ob_client, target_size_usdc, side, price_jlp_usdc).await?;
+            instructions.push(ix);
+        }
+        ComboVariants::Settle => {
+            let ix = settle_balance(&mut ob_client).await?;
+            instructions.push(ix);
+        }
+        ComboVariants::CancelSettle => {
+            for oid in oids {
+                let ix = cancel_limit_order(&mut ob_client, oid, side).await?;
+                instructions.push(ix);
+            }
+            let ix = settle_balance(&mut ob_client).await?;
             instructions.push(ix);
         }
         ComboVariants::SettlePlace => {
@@ -70,11 +87,11 @@ pub async fn combo_cancel_settle_place(
         recent_hash.0,
     );
     let mut config = RpcSendTransactionConfig::default();
-    config.skip_preflight = true;
+    config.skip_preflight = false;
     config.preflight_commitment = Some(CommitmentLevel::Confirmed);
     let kp_str = ob_client.keypair.pubkey().to_string().clone();
     match ob_client.rpc_client.send_transaction_with_config(&txn, config).await{
-        Ok(_) => {}
+        Ok(v) => {tracing::info!("rpc success: {:?}",v);}
         Err(err) => {tracing::error!("err combo'ing: {err}, {}", kp_str);}
     }
 

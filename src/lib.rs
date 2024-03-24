@@ -5,6 +5,7 @@ PC == QUOTE
 pub mod utils;
 pub mod ixs;
 
+pub use openbook_dex::matching::Side;
 use std::ops::DerefMut;
 use std::str::FromStr;
 use openbook_dex::critbit::{SlabView};
